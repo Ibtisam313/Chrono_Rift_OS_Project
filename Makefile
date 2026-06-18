@@ -16,13 +16,16 @@ all: clean $(TARGETS)
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
-$(BIN_DIR)/arbiter: arbiter/arbiter.cpp | $(BIN_DIR)
+ARBITER_SRC = $(wildcard arbiter/*.cpp)
+HIP_SRC = $(wildcard hip/*.cpp)
+ASP_SRC = $(wildcard asp/*.cpp)
+$(BIN_DIR)/arbiter: $(ARBITER_SRC) shared.cpp shared.h | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) arbiter/*.cpp shared.cpp -o $@ $(LIBS)
 
-$(BIN_DIR)/hip: hip/hip.cpp | $(BIN_DIR)
+$(BIN_DIR)/hip: $(HIP_SRC) shared.cpp shared.h | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) hip/*.cpp shared.cpp -o $@ $(LIBS)
 
-$(BIN_DIR)/asp: asp/asp.cpp | $(BIN_DIR)
+$(BIN_DIR)/asp: $(ASP_SRC) shared.cpp shared.h | $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) asp/*.cpp shared.cpp -o $@ $(LIBS)
 
 clean:

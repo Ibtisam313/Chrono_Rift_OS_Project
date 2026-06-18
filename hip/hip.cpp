@@ -1,4 +1,11 @@
+//Human Interfacing Process: shared memory + stdin-driven player_actions[].
+ // input.cpp owns a stdin reader thread; player_threads.cpp runs one worker per player slot.
+//Set CR_TEST_MODE=1 for headless automated actions (scripts only); omit for real keyboard play.
+
 #include "../shared.h"
+#include "hip_tui.h"
+#include "input.h"
+#include "player_threads.h"
 
 #include <cerrno>
 #include <csignal>
@@ -45,11 +52,56 @@ int main() {
     state->hip_pid = getpid();
     pthread_mutex_unlock(&state->state_mutex);
 
-    puts("[hip] attached to shared memory.");
-    puts("[hip] PID registered. Press Ctrl+C to stop.");
+    fputs("[hip] attached to shared memory.\n", stderr);
+    const int hip_tui = hip_tui_init(state);
+    if (!hip_tui) {
+        hip_input_start();
+        fputs("[hip] PID registered. Line mode: stdin choices; stderr shows menu on your turn.\n", stderr);
+        fputs("[hip] Tip: omit CR_HIP_TUI=0 on a TTY for scrollable ncurses (this session is line mode).\n", stderr);
+    } else {
+        fputs("[hip] PID registered. ncurses HUD on (export CR_HIP_TUI=0 for plain line mode).\n", stderr);
+    }
+
+    int threads_ok = (hip_player_threads_start(state) == 0);
+    if (!threads_ok) {
+        fputs("[hip] error: player worker threads failed to start.\n", stderr);
+        if (hip_tui) {
+            hip_tui_shutdown();
+        } else {
+            hip_input_stop();
+        }
+        munmap(state, sizeof(*state));
+        return 1;
+    }
 
     while (!g_should_stop && state->game_running) {
-        sleep(1);
+        usleep(250 * 1000);
+    }
+
+    cr_end_reason_t final_reason = CR_END_NONE;
+    pthread_mutex_lock(&state->state_mutex);
+    final_reason = state->end_reason;
+    pthread_mutex_unlock(&state->state_mutex);
+
+    hip_player_threads_stop();
+    if (hip_tui) {
+        hip_tui_shutdown();
+    } else {
+        hip_input_stop();
+    }
+
+    switch (final_reason) {
+        case CR_END_PLAYER_WIN:
+            puts("[hip] Victory: players defeated required number of enemies.");
+            break;
+        case CR_END_PLAYER_LOSE:
+            puts("[hip] Game over: all player characters defeated.");
+            break;
+        case CR_END_PLAYER_QUIT:
+            puts("[hip] Game session ended (quit or client disconnect).");
+            break;
+        default:
+            break;
     }
 
     pthread_mutex_lock(&state->state_mutex);

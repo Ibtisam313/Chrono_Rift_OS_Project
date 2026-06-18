@@ -12,16 +12,6 @@
 extern "C" {
 #endif
 
-/*
- * This header is the frozen shared-memory contract between:
- *   - arbiter process
- *   - human interfacing process (hip)
- *   - automated strategic process (asp)
- *
- * Do not change field order/types once implementation starts.
- */
-
-/* ---------- Global compile-time constants ---------- */
 #define CR_SHM_NAME "/chrono_rift_shm"
 #define CR_MAX_PLAYERS 4
 #define CR_MAX_NPCS 9
@@ -41,6 +31,8 @@ extern "C" {
 #define CR_PLAYER_MAX_STAMINA 100
 #define CR_NPC_MAX_STAMINA 150
 #define CR_WIN_KILL_TARGET 10
+
+#define CR_DEV_MODE 0
 
 /* ---------- Role / lifecycle ---------- */
 typedef enum cr_process_role_t {
@@ -225,10 +217,14 @@ typedef struct cr_shared_state_t {
 /*
  * Static weapon table in fixed index order.
  * Implement this function in exactly one .cpp file and expose read-only pointer.
+ * Returns the full table; if count_out is non-NULL, writes the number of entries.
  */
 const cr_weapon_def_t *cr_get_weapon_defs(int *count_out);
 
-/* Utility mapping helpers; implement once and reuse in all processes. */
+/*
+ * Utility mapping helpers (implemented in shared.cpp once; linked into every executable).
+ * slot_size: inventory footprint; damage: USE_WEAPON base; is_artifact: ties to artifact system.
+ */
 int cr_weapon_slot_size(cr_weapon_type_t weapon);
 int cr_weapon_damage(cr_weapon_type_t weapon);
 int cr_is_artifact_weapon(cr_weapon_type_t weapon);

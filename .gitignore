@@ -1,0 +1,14 @@
+# Compiled binaries
+bin/
+
+# Object files
+*.o
+
+# Executables
+*.exe
+
+# Build files
+build/
+
+# OS files
+.DS_Store
